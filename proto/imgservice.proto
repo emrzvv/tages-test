@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+
+option go_package = "github.com/emrzvv/tages-test/proto";
+
+package proto;
+
+service ImageService {
+    rpc UploadImage(stream UploadImageRequest) returns (UploadImageResponse) {}
+    rpc DownloadImage(DownloadImageRequest) returns (stream DownloadImageResponse) {}
+    rpc GetImagesList(GetImagesListRequest) returns (GetImagesListStrResponse) {}
+}
+
+message UploadImageRequest {
+    oneof data {
+        UploadMeta meta = 1;
+        bytes chunk = 2;
+    }
+}
+
+message UploadMeta {
+    string name = 1;
+}
+
+message UploadImageResponse {
+    string message = 1;
+    ImageInfo info = 2;
+}
+
+message ImageInfo {
+    string name = 1;
+    string created_at = 2;
+    string last_modified_at = 3;
+}
+
+message DownloadImageRequest {
+    string name = 1;
+}
+
+message DownloadImageResponse {
+    bytes chunk = 1;
+}
+
+message GetImagesListRequest {
+
+}
+
+message GetImagesListStrResponse {
+    repeated string image_info = 1;
+}
+
