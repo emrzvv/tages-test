@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"sync"
+	"time"
 
 	"github.com/emrzvv/tages-test/cfg"
 	"github.com/emrzvv/tages-test/internal/app/model"
@@ -66,6 +67,8 @@ type SQLiteMetaStorage struct {
 	db     *sql.DB
 }
 
+// комментарий к решению: sqlite не хранит даты,
+// поэтому использую костыль с преобразованием в строку и обратно
 func NewSQLiteMetaStorage(config *cfg.Config) (MetaStorage, error) {
 	db, err := sql.Open("sqlite3", config.SQLiteDBPath)
 	if err != nil {
@@ -85,7 +88,7 @@ func (s *SQLiteMetaStorage) InsertMeta(meta model.MetaData) error {
 	_, err := s.db.Exec(`
         insert into meta (name, created_at, modified_at)
         values (?, ?, ?)
-    `, meta.Name, meta.CreatedAt, meta.ModifiedAt)
+    `, meta.Name, meta.CreatedAt.Format(time.RFC3339), meta.ModifiedAt.Format(time.RFC3339))
 	return err
 }
 
@@ -93,7 +96,7 @@ func (s *SQLiteMetaStorage) UpdateMeta(meta model.MetaData) error {
 	_, err := s.db.Exec(`
         update meta set created_at = ?, modified_at = ?
         where name = ?
-    `, meta.CreatedAt, meta.ModifiedAt, meta.Name)
+    `, meta.CreatedAt.Format(time.RFC3339), meta.ModifiedAt.Format(time.RFC3339), meta.Name)
 	return err
 }
 
@@ -105,10 +108,20 @@ func (s *SQLiteMetaStorage) GetMetaByName(name string) (model.MetaData, bool) {
     `, name)
 
 	var result model.MetaData
-	err := row.Scan(&result.Name, &result.CreatedAt, &result.ModifiedAt)
+	var createdAtStr, modifiedAtStr string
+	err := row.Scan(&result.Name, &createdAtStr, &modifiedAtStr)
 	if err == sql.ErrNoRows {
 		return model.MetaData{}, false
 	} else if err != nil {
+		return model.MetaData{}, false
+	}
+
+	result.CreatedAt, err = time.Parse(time.RFC3339, createdAtStr)
+	if err != nil {
+		return model.MetaData{}, false
+	}
+	result.ModifiedAt, err = time.Parse(time.RFC3339, modifiedAtStr)
+	if err != nil {
 		return model.MetaData{}, false
 	}
 	return result, true
@@ -117,7 +130,7 @@ func (s *SQLiteMetaStorage) GetMetaByName(name string) (model.MetaData, bool) {
 func (s *SQLiteMetaStorage) GetMetaList() []model.MetaData {
 	rows, err := s.db.Query(`
         select name, created_at, modified_at
-          from meta
+        from meta
     `)
 	if err != nil {
 		return nil
@@ -127,7 +140,16 @@ func (s *SQLiteMetaStorage) GetMetaList() []model.MetaData {
 	var metas []model.MetaData
 	for rows.Next() {
 		var m model.MetaData
-		if err := rows.Scan(&m.Name, &m.CreatedAt, &m.ModifiedAt); err != nil {
+		var createdAtStr, modifiedAtStr string
+		if err := rows.Scan(&m.Name, &createdAtStr, &modifiedAtStr); err != nil {
+			continue
+		}
+		m.CreatedAt, err = time.Parse(time.RFC3339, createdAtStr)
+		if err != nil {
+			continue
+		}
+		m.ModifiedAt, err = time.Parse(time.RFC3339, modifiedAtStr)
+		if err != nil {
 			continue
 		}
 		metas = append(metas, m)

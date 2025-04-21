@@ -30,23 +30,27 @@ func (s *ImgService) FormatName(name string) string {
 }
 
 func (s *ImgService) SaveMeta(name string, currentTime time.Time) error {
-	currentTimeStr := currentTime.Format(time.RFC3339)
+	// currentTimeStr := currentTime.Format(time.RFC3339)
 	meta, exists := s.metaStorage.GetMetaByName(name)
 	if !exists {
 		err := s.metaStorage.InsertMeta(model.MetaData{
 			Name:       name,
-			CreatedAt:  currentTimeStr,
-			ModifiedAt: currentTimeStr,
+			CreatedAt:  currentTime,
+			ModifiedAt: currentTime,
 		})
 		return err
 	}
 	updatedMeta := model.MetaData{
 		Name:       meta.Name,
 		CreatedAt:  meta.CreatedAt,
-		ModifiedAt: currentTimeStr,
+		ModifiedAt: currentTime,
 	}
 	err := s.metaStorage.UpdateMeta(updatedMeta)
 	return err
+}
+
+func (s *ImgService) FormatTime(toFormat time.Time) string {
+	return toFormat.Format(time.RFC3339)
 }
 
 func (s *ImgService) GetMetaByName(name string) (model.MetaData, bool) {
