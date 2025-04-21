@@ -79,8 +79,8 @@ func (server *Server) UploadImage(stream pb.ImageService_UploadImageServer) erro
 		Message: "Image uploaded successfully",
 		Info: &pb.ImageInfo{
 			Name:           meta.Name,
-			CreatedAt:      meta.CreatedAt,
-			LastModifiedAt: meta.ModifiedAt,
+			CreatedAt:      server.imgService.FormatTime(meta.CreatedAt),
+			LastModifiedAt: server.imgService.FormatTime(meta.ModifiedAt),
 		},
 	})
 }
